@@ -29,13 +29,13 @@ namespace VRTK
         [HideInInspector]
         public GameObject validDropZone;
 
-        private RectTransform dragTransform;
-        private Vector3 startPosition;
-        private Quaternion startRotation;
-        private GameObject startDropZone;
-        private Transform startParent;
-        private Canvas startCanvas;
-        private CanvasGroup canvasGroup;
+        protected RectTransform dragTransform;
+        protected Vector3 startPosition;
+        protected Quaternion startRotation;
+        protected GameObject startDropZone;
+        protected Transform startParent;
+        protected Canvas startCanvas;
+        protected CanvasGroup canvasGroup;
 
         public virtual void OnBeginDrag(PointerEventData eventData)
         {
@@ -55,7 +55,7 @@ namespace VRTK
             var pointer = GetPointer(eventData);
             if (pointer)
             {
-                pointer.OnUIPointerElementDragStart(pointer.SetUIPointerEvent(gameObject));
+                pointer.OnUIPointerElementDragStart(pointer.SetUIPointerEvent(pointer.pointerEventData.pointerPressRaycast, gameObject));
             }
         }
 
@@ -83,9 +83,9 @@ namespace VRTK
                 }
             }
 
+            var destinationCanvas = (eventData.pointerEnter ? eventData.pointerEnter.GetComponentInParent<Canvas>() : null);
             if (restrictToOriginalCanvas)
             {
-                var destinationCanvas = (eventData.pointerEnter ? eventData.pointerEnter.GetComponentInParent<Canvas>() : null);
                 if (destinationCanvas && destinationCanvas != startCanvas)
                 {
                     ResetElement();
@@ -93,12 +93,19 @@ namespace VRTK
                 }
             }
 
+            if (destinationCanvas == null)
+            {
+                //We've been dropped off of a canvas
+                ResetElement();
+                validDragEnd = false;
+            }
+
             if (validDragEnd)
             {
                 var pointer = GetPointer(eventData);
                 if (pointer)
                 {
-                    pointer.OnUIPointerElementDragEnd(pointer.SetUIPointerEvent(gameObject));
+                    pointer.OnUIPointerElementDragEnd(pointer.SetUIPointerEvent(pointer.pointerEventData.pointerPressRaycast, gameObject));
                 }
             }
 
@@ -117,13 +124,13 @@ namespace VRTK
             }
         }
 
-        private VRTK_UIPointer GetPointer(PointerEventData eventData)
+        protected virtual VRTK_UIPointer GetPointer(PointerEventData eventData)
         {
             var controller = VRTK_DeviceFinder.GetControllerByIndex((uint)eventData.pointerId, false);
             return (controller ? controller.GetComponent<VRTK_UIPointer>() : null);
         }
 
-        private void SetDragPosition(PointerEventData eventData)
+        protected virtual void SetDragPosition(PointerEventData eventData)
         {
             if (eventData.pointerEnter != null && eventData.pointerEnter.transform as RectTransform != null)
             {
@@ -138,7 +145,7 @@ namespace VRTK
             }
         }
 
-        private void ResetElement()
+        protected virtual void ResetElement()
         {
             transform.position = startPosition;
             transform.rotation = startRotation;
